@@ -22,13 +22,13 @@ use yii\base\InlineAction;
  */
 abstract class Controller extends \yii\base\Controller
 {
-    
+
     /**
      * Stores all params even some elements are not assigned in the action method.
      * @var array
      */
     private $_params = [];
-    
+
     /**
      * Returns action params from the queue job.
      * @return array
@@ -51,7 +51,7 @@ abstract class Controller extends \yii\base\Controller
     public function bindActionParams($action, $params)
     {
         $this->_params = $params;
-        
+
         if ($action instanceof InlineAction) {
             $method = new \ReflectionMethod($this, $action->actionMethod);
         } else {
@@ -59,14 +59,14 @@ abstract class Controller extends \yii\base\Controller
         }
 
         $args = [];
-        
+
         $missing = [];
-        
+
         foreach ($method->getParameters() as $i => $param) {
             /* @var $param \ReflectionParameter */
             $name = $param->getName();
             if (isset($params[$name])) {
-                if ($param->isArray() && !is_array($params[$name])) {
+                if ($this->declaresArray($param) && !is_array($params[$name])) {
                     $args[] = preg_split('/\s*,\s*/', $params[$name]);
                 } else {
                     $args[] = $params[$name];
@@ -77,7 +77,7 @@ abstract class Controller extends \yii\base\Controller
                 $missing[] = $name;
             }
         }
-        
+
         if (!empty($missing)) {
             throw new \Exception(
                 \Yii::t('yii', 'Missing required arguments: {params}', [
@@ -86,5 +86,18 @@ abstract class Controller extends \yii\base\Controller
         }
 
         return $args;
+    }
+
+    private function declaresArray(\ReflectionParameter $reflectionParameter): bool
+    {
+        $reflectionType = $reflectionParameter->getType();
+
+        if (!$reflectionType) return false;
+
+        $types = $reflectionType instanceof ReflectionUnionType
+            ? $reflectionType->getTypes()
+            : [$reflectionType];
+
+        return in_array('array', array_map(fn(ReflectionNamedType $t) => $t->getName(), $types));
     }
 }

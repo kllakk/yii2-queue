@@ -114,7 +114,7 @@ class Controller extends \yii\console\Controller
     public function actionListen(
         $cwd = null,
         $timeout = null, // moved to queue config
-        array $env = null
+        array $env = []
     ) {
         $this->stdout("Listening to queue...\n");
 

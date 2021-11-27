@@ -118,7 +118,7 @@ class ProcessRunner extends \yii\base\Component implements IteratorAggregate
      * @param array $env enviromental variables for the sub proc
      * @return void
      */
-    public function listen( $cwd = null, $timeout = 0, array $env = null )
+    public function listen( $cwd = null, $timeout = 0, array $env = [] )
     {
         $this->cwd = $cwd;
         $this->env = $env;
@@ -143,12 +143,12 @@ class ProcessRunner extends \yii\base\Component implements IteratorAggregate
                 if ( $this->getCanOpenNew() ) {
                     $this->stdout("Running new  process...\n");
                     $this->runProcess(
-                            $this->buildCommand()
-                        );
+                        $this->buildCommand()
+                    );
                 }
                 else {
                     $this->stdout(sprintf('Nothing to do, Waiting for processes to finish; queueSize: %d , opened: %d , limit: %d ',
-                        $queueSize,$this->getOpenedProcsCount(),$this->getMaxProcesses()).PHP_EOL);
+                            $queueSize,$this->getOpenedProcsCount(),$this->getMaxProcesses()).PHP_EOL);
                     sleep($this->queue->waitSecondsIfNoProcesses); // wait x seconds then try cleaning up
                 }
             }
@@ -169,19 +169,19 @@ class ProcessRunner extends \yii\base\Component implements IteratorAggregate
     /**
      * run the sub process, register it with others,
      * if we are in single threaded mode, wait for it to finish before moving on
-     * @param string $command the command to exec
+     * @param array $command the command to exec
      * @param string $cwd
      * @return void
      */
-    public function runProcess( $command )
+    public function runProcess(array $command)
     {
         $process = new Process(
             $command,
-            $this->cwd ? $this->cwd : getcwd(),
+            $this->cwd ?: getcwd(),
             $this->env
         );
 
-        $this->stdout('Running ' . $command . ' (mode: ' . ($this->getIsSingleThreaded() ? 'single' : 'multi') . ')' . PHP_EOL);
+        $this->stdout('Running ' . implode(' ', $command) . ' (mode: ' . ($this->getIsSingleThreaded() ? 'single' : 'multi') . ')' . PHP_EOL);
 
         $process->setTimeout($this->getTimeout());
         $process->setIdleTimeout($this->getIdleTimeout());
@@ -235,12 +235,13 @@ class ProcessRunner extends \yii\base\Component implements IteratorAggregate
 
     /**
      * build the command to launch sub process
-     * @return string command
+     * @return array command
      */
-    protected function buildCommand()
+    protected function buildCommand(): array
     {
         // using setsid to stop signal propagation to allow background processes to finish even if we receive a signal
-        return "setsid " . PHP_BINARY . " {$this->scriptPath} {$this->getCommand()}";
+        return ['setsid', PHP_BINARY, $this->scriptPath, $this->getCommand()];
+        //return "setsid " . PHP_BINARY . " {$this->scriptPath} {$this->getCommand()}";
     }
 
     /**
@@ -301,7 +302,7 @@ class ProcessRunner extends \yii\base\Component implements IteratorAggregate
                     && $signal )
                 {
                     $this->stdout(sprintf('Sending signal %d to pid %d', $signal, $pid) . PHP_EOL);
-                    
+
                     try {
                         $process->signal($signal);
                     } catch ( \Symfony\Component\Process\Exception\LogicException $e ) {
